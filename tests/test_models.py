@@ -27,7 +27,7 @@ import os
 #import logging
 import unittest
 from decimal import Decimal
-from service.models import Product, Category, db
+from service.models import Product, Category, db, DataValidationError
 from service import app
 from tests.factories import ProductFactory
 
@@ -194,3 +194,39 @@ class TestProductModel(unittest.TestCase):
         self.assertEqual(found.count(), count)
         for product in found:
             self.assertEqual(product.category, category)
+
+    def test_update_no_id_raises(self):
+        """update() ohne ID sollte DataValidationError werfen"""
+        product = ProductFactory()
+        product.id = None
+        with self.assertRaises(DataValidationError):
+            product.update()
+
+    def test_deserialize_missing_name_raises(self):
+        """deserialize() ohne 'name' sollte DataValidationError werfen"""
+        product = Product()
+        data = {"description": "desc", "price": "10.0", "available": True, "category": "CLOTHS"}
+        with self.assertRaises(DataValidationError):
+            product.deserialize(data)
+
+
+    def test_deserialize_invalid_available_type_raises(self):
+        """deserialize() mit falschem Typ für 'available' sollte DataValidationError werfen"""
+        product = Product()
+        data = {"name": "Hat", "description": "desc", "price": "10.0", "available": "yes", "category": "CLOTHS"}
+        with self.assertRaises(DataValidationError):
+            product.deserialize(data)
+
+
+    def test_deserialize_invalid_category_raises(self):
+        """deserialize() mit ungültiger Kategorie sollte DataValidationError werfen"""
+        product = Product()
+        data = {"name": "Hat", "description": "desc", "price": "10.0", "available": True, "category": "UNKNOWN_ENUM"}
+        with self.assertRaises(DataValidationError):
+            product.deserialize(data)
+
+
+    def test_find_by_category_returns_empty(self):
+        """find_by_category() sollte leere Liste zurückgeben, wenn keine Produkte vorhanden sind"""
+        results = Product.find_by_category(Category.TOOLS).all()
+        self.assertEqual(len(results), 0)

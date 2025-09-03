@@ -273,3 +273,15 @@ class TestProductRoutes(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         data = response.get_json()
         self.assertIn("was not found", data["message"])
+
+    def test_bad_request_on_update_without_id(self):
+        """It should return 400 Bad Request when updating without ID"""
+        product = ProductFactory()
+        # Erzeuge dict ohne id
+        new_product = product.serialize()
+        new_product.pop("id", None)
+
+        response = self.client.put(f"{BASE_URL}/0", json=new_product)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response.get_json()
+        self.assertIn("Update called with empty ID field", data["message"])
